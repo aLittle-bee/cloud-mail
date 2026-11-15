@@ -70,8 +70,25 @@ async function handleInbound(message, env) {
     text: parsed.text || "", html: typeof parsed.html === "string" ? parsed.html : "",
     messageId: parsed.messageId || "", sizeBytes: raw.byteLength
   });
-  // Keep the raw object only when the R2 write succeeded; metadata remains useful without R2.
   if (objectKey) await env.DB.prepare("UPDATE messages SET raw_object_key=? WHERE id=?").bind(objectKey, id).run();
+
+  for (const attachment of (parsed.attachments || [])) {
+    const attachmentId = randomId();
+    const filename = String(attachment.filename || "attachment").replace(/[\\/\\r\\n"]/g, "_").slice(0, 180);
+    const bytes = attachment.content instanceof ArrayBuffer
+      ? attachment.content
+      : attachment.content?.buffer
+        ? attachment.content.buffer.slice(attachment.content.byteOffset, attachment.content.byteOffset + attachment.content.byteLength)
+        : null;
+    let key = null;
+    if (env.MAIL_FILES && bytes) {
+      key = `attachments/${mailbox.id}/${id}/${attachmentId}`;
+      await env.MAIL_FILES.put(key, bytes, { httpMetadata: { contentType: attachment.mimeType || "application/octet-stream" } });
+    }
+    await env.DB.prepare("INSERT INTO attachments(id,message_id,mailbox_id,filename,content_type,size_bytes,object_key,content_id) VALUES(?,?,?,?,?,?,?,?)")
+      .bind(attachmentId, id, mailbox.id, filename, attachment.mimeType || "application/octet-stream",
+        attachment.content?.byteLength || attachment.content?.length || 0, key, attachment.contentId || null).run();
+  }
 }
 
 async function api(request, env) {
@@ -137,6 +154,30 @@ async function api(request, env) {
     const { results } = await env.DB.prepare(query).bind(...args).all();
     return json({ ok: true, data: results });
   }
+  const attachmentListMatch = /^\\/mail\\/([\\w-]+)\\/attachments$/.exec(path);
+  if (attachmentListMatch && request.method === "GET") {
+    const owned = await env.DB.prepare("SELECT id FROM messages WHERE id=? AND mailbox_id=?").bind(attachmentListMatch[1], mailbox.id).first();
+    if (!owned) return errorResponse("Message not found", 404);
+    const { results } = await env.DB.prepare("SELECT id,filename,content_type,size_bytes,content_id FROM attachments WHERE message_id=? AND mailbox_id=? ORDER BY rowid")
+      .bind(attachmentListMatch[1], mailbox.id).all();
+    return json({ ok: true, data: results });
+  }
+  const attachmentMatch = /^\\/attachments\\/([\\w-]+)$/.exec(path);
+  if (attachmentMatch && request.method === "GET") {
+    const item = await env.DB.prepare("SELECT id,filename,content_type,object_key FROM attachments WHERE id=? AND mailbox_id=?")
+      .bind(attachmentMatch[1], mailbox.id).first();
+    if (!item) return errorResponse("Attachment not found", 404);
+    if (!item.object_key || !env.MAIL_FILES) return errorResponse("Attachment storage is not configured", 503);
+    const object = await env.MAIL_FILES.get(item.object_key);
+    if (!object) return errorResponse("Attachment content not found", 404);
+    return new Response(object.body, { headers: {
+      "content-type": item.content_type || "application/octet-stream",
+      "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(item.filename)}`,
+      "x-content-type-options": "nosniff",
+      "cache-control": "private, no-store"
+    }});
+  }
+
   const messageMatch = /^\/mail\/([\w-]+)$/.exec(path);
   if (messageMatch && request.method === "GET") {
     const row = await env.DB.prepare("SELECT * FROM messages WHERE id=? AND mailbox_id=?").bind(messageMatch[1], mailbox.id).first();
