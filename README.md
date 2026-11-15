@@ -11,7 +11,7 @@ A clean-room rewrite of Cloud Mail for Cloudflare Workers. It provides a small, 
 - Admin API protected by a secret stored as a Worker secret.
 - Per-mailbox API keys stored only as SHA-256 hashes.
 - Cursor pagination, mailbox ownership checks, bounded request sizes, and security headers.
-- Optional R2 storage for raw message source and attachments.
+- Optional R2 storage for raw message source and attachments, with mailbox-scoped authenticated downloads.
 - No secrets, database IDs, or account-specific settings committed to this repository.
 
 ## Requirements
@@ -47,6 +47,11 @@ Copy `.dev.vars.example` to `.dev.vars` and set a long random `ADMIN_API_KEY`. N
 6. Deploy: `npx wrangler deploy`.
 7. In Cloudflare Email Routing, route the desired domain's inbound messages to this Worker.
 
+## Web interface
+
+- `/` — mailbox inbox; connect with a mailbox API key.
+- `/admin.html` — administrator console for creating mailboxes, rotating API keys, and deleting mailboxes. The admin key remains in the tab's memory and must never be shared.
+
 ## API
 
 All API paths are prefixed by `/api/v1`. Admin endpoints require `Authorization: Bearer <ADMIN_API_KEY>`.
@@ -57,6 +62,9 @@ All API paths are prefixed by `/api/v1`. Admin endpoints require `Authorization:
 - `DELETE /api/v1/admin/mailboxes/:id`
 - `POST /api/v1/admin/mailboxes/:id/rotate-key`
 - `GET /api/v1/mail` — mailbox API key required; supports `?limit=25&before=<id>`
+- `GET /api/v1/me` — authenticated mailbox identity.
+- `GET /api/v1/mail/:id/attachments` — list attachments for a message.
+- `GET /api/v1/attachments/:id` — download an attachment.
 - `GET /api/v1/mail/:id`
 - `DELETE /api/v1/mail/:id`
 - `POST /api/v1/send` — mailbox API key and configured Resend API key required.
