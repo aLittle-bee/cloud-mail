@@ -64,10 +64,8 @@ $("connect-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   token = $("api-key").value.trim();
   try {
-    const data = await request("/mail?limit=1");
-    void data;
-    const me = await request("/mail?limit=1");
-    $("mail-address").textContent = "Mailbox";
+    const me = await request("/me");
+    $("mail-address").textContent = me.email;
     connectView(true);
     await loadMessages();
   } catch (error) {
