@@ -1,95 +1,113 @@
-# Cloud Mail 2
+# Cloud Mail v2
 
-A clean-room rewrite of Cloud Mail for Cloudflare Workers. It provides a small, auditable email platform with a web inbox, mailbox administration, inbound email processing, a JSON API, D1 persistence, and optional R2 attachment storage.
+Cloud Mail is a Cloudflare Workers-based mailbox service. The current production deployment uses a D1 database, a Worker API, a native Cloudflare Email Sending binding, and a small web entry page.
+
+## Production deployment
+
+- Web inbox: https://mail.12310721.xyz/
+- Admin endpoint: https://mail.12310721.xyz/admin
+- Health: https://mail.12310721.xyz/health
+- API prefix: `/api/v1`
+- Worker: `cloud-mail-v2`
+- D1 database: `cloud-mail-v2` (APAC)
+- Inbound handler: Cloudflare Workers Email handler. Configure Email Routing separately to direct messages to this Worker.
 
 ## Features
 
-- Cloudflare Worker API and static web application.
-- D1-backed mailbox and message storage with SQL migrations.
-- Inbound email via the Workers Email handler.
-- Optional outbound email through Resend.
-- Admin API protected by a secret stored as a Worker secret.
-- Per-mailbox API keys stored only as SHA-256 hashes.
-- Cursor pagination, mailbox ownership checks, bounded request sizes, and security headers.
-- Optional R2 storage for raw message source and attachments, with mailbox-scoped authenticated downloads.
-- No secrets, database IDs, or account-specific settings committed to this repository.
+- D1-backed mailbox and message records.
+- Separate administrator and mailbox API keys; only SHA-256 hashes are stored.
+- Mailbox creation, listing, deletion, and API-key rotation.
+- Mail listing and message retrieval, scoped to the authenticated mailbox.
+- Outbound sending through Cloudflare's native `send_email` binding.
+- Inbound email handler with basic RFC 5322 header/body extraction.
+- Responsive inbox entry page and administrator API entry page.
+- Request size limits, no-store responses, and basic security headers.
 
 ## Requirements
 
-- Cloudflare account with Workers, D1 and (optionally) R2.
-- Node.js 20+ and npm.
-- A domain configured for Cloudflare Email Routing if you want inbound mail.
-- A Resend account and verified sending domain if you want outbound mail.
+- Cloudflare Workers and D1.
+- A domain on Cloudflare DNS.
+- Email Sending domain onboarding for outbound delivery.
+- Email Routing rule targeting this Worker for inbound delivery.
+- R2 is optional and is not currently required by the deployed core.
 
-## Local setup
+## Local development
+
+1. Install Node.js 20+.
+2. From `worker/`, run `npm install`.
+3. Ensure `worker/wrangler.toml` references your own D1 database ID.
+4. Create a D1 database and apply migrations:
 
 ```sh
 cd worker
-npm install
-npx wrangler d1 create cloud-mail
-npx wrangler d1 migrations apply cloud-mail --local
+npx wrangler d1 create cloud-mail-v2
+npx wrangler d1 migrations apply cloud-mail-v2 --local
 npx wrangler dev
 ```
 
-Copy `.dev.vars.example` to `.dev.vars` and set a long random `ADMIN_API_KEY`. Never commit `.dev.vars`.
+5. Configure a strong administrator key. The Worker compares the SHA-256 hash of the presented key with the `settings.admin_api_key_hash` value. Generate a key locally and insert only its hash:
+
+```sh
+ADMIN_KEY="$(openssl rand -hex 48)"
+ADMIN_HASH="$(printf %s "$ADMIN_KEY" | openssl dgst -sha256 | awk '{print $2}')"
+npx wrangler d1 execute cloud-mail-v2 --local --command "INSERT OR REPLACE INTO settings(setting_key,setting_value) VALUES ('admin_api_key_hash','$ADMIN_HASH');"
+printf '%s\n' "$ADMIN_KEY"
+```
+
+Keep the printed administrator key private. Do not commit it or its plaintext value.
 
 ## Production setup
 
-1. Create the D1 database and copy its ID into `worker/wrangler.toml`.
-2. Optionally create an R2 bucket and configure its binding.
-3. Apply migrations: `cd worker && npx wrangler d1 migrations apply cloud-mail --remote`.
-4. Set secrets:
-   ```sh
-   npx wrangler secret put ADMIN_API_KEY
-   npx wrangler secret put RESEND_API_KEY # optional
-   ```
-5. Configure `MAIL_DOMAINS` in Worker variables as a comma-separated list, e.g. `example.com,mail.example.com`.
-6. Deploy: `npx wrangler deploy`.
-7. In Cloudflare Email Routing, route the desired domain's inbound messages to this Worker.
+The production D1 database is already provisioned and its schema is applied. For a new account:
 
-## Web interface
-
-- `/` — mailbox inbox; connect with a mailbox API key.
-- `/admin.html` — administrator console for creating mailboxes, rotating API keys, and deleting mailboxes. The admin key remains in the tab's memory and must never be shared.
+1. Create a D1 database and update `database_id` in `worker/wrangler.toml`.
+2. Apply migrations with `npx wrangler d1 migrations apply cloud-mail-v2 --remote`.
+3. Insert a SHA-256 hash of a high-entropy administrator key into the `settings` table as shown above, using `--remote`.
+4. Configure `MAIL_DOMAINS` and `MAIL_FROM`.
+5. Onboard the sending domain in Cloudflare Email Service and verify its DNS records.
+6. Deploy with `npx wrangler deploy`.
+7. Configure Email Routing to deliver inbound messages to the Worker.
 
 ## API
 
-All API paths are prefixed by `/api/v1`. Admin endpoints require `Authorization: Bearer <ADMIN_API_KEY>`.
+Admin requests use `Authorization: Bearer <ADMIN_API_KEY>`.
 
 - `GET /api/v1/health`
 - `GET /api/v1/admin/mailboxes`
-- `POST /api/v1/admin/mailboxes` — `{"email":"person@example.com","label":"Personal"}`
-- `DELETE /api/v1/admin/mailboxes/:id`
+- `POST /api/v1/admin/mailboxes` — JSON: `{"email":"person@12310721.xyz","label":"Personal"}`
 - `POST /api/v1/admin/mailboxes/:id/rotate-key`
-- `GET /api/v1/mail` — mailbox API key required; supports `?limit=25&before=<id>`
-- `GET /api/v1/me` — authenticated mailbox identity.
-- `GET /api/v1/mail/:id/attachments` — list attachments for a message.
-- `GET /api/v1/attachments/:id` — download an attachment.
+- `DELETE /api/v1/admin/mailboxes/:id`
+
+Mailbox requests use `Authorization: Bearer <MAILBOX_API_KEY>`.
+
+- `GET /api/v1/me`
+- `GET /api/v1/mail?limit=25`
 - `GET /api/v1/mail/:id`
-- `DELETE /api/v1/mail/:id`
-- `POST /api/v1/send` — mailbox API key and configured Resend API key required.
+- `POST /api/v1/send` — JSON: `{"to":"recipient@example.net","subject":"Hello","text":"Message body"}`
 
-Mailbox endpoints use `Authorization: Bearer <mailbox-api-key>`. The raw mailbox key is shown only once when a mailbox is created or its key is rotated.
+The raw mailbox API key is returned once at creation or rotation. Store it securely.
 
-## Important boundaries
+## Current limitations
 
-This project is a Worker-based mail application, not an IMAP/POP3 server. Receiving depends on Cloudflare Email Routing. Sending depends on the configured outbound provider. DNS, domain verification, provider limits, and Cloudflare account capabilities remain external prerequisites.
+- The current inbound parser extracts basic headers and the raw body text. Full MIME multipart parsing, encoded-word decoding, attachment extraction and HTML sanitization are not yet implemented.
+- R2 is not enabled for this Cloudflare account yet, so attachment/raw-source storage is not active.
+- Outbound delivery requires Email Sending domain onboarding. The Worker binding is configured, but Cloudflare's Email Domain API is currently unavailable to this account connection.
+- The admin page is currently an API entry/help page; mailbox administration is available through the documented authenticated API. A full browser management UI remains future work.
+- This is a Worker-based webmail/API service, not an IMAP/POP3 server.
 
 ## Security
 
-- Keep `ADMIN_API_KEY` and `RESEND_API_KEY` in Worker secrets.
-- Rotate any credential that was ever committed to Git history.
-- Restrict admin API access at the Cloudflare layer where possible.
-- Set a custom domain and HTTPS before production use.
-- Configure retention and R2 lifecycle policies to match your privacy requirements.
-- Do not expose raw inbound message content through public endpoints.
+- Administrator and mailbox credentials are stored as SHA-256 hashes.
+- Use high-entropy keys and rotate credentials that have ever appeared in Git history.
+- Keep the admin key out of source control, browser local storage, and public logs.
+- The administrator key currently provisioned for production must be treated as a private credential.
+- Configure retention and deletion policies before using this for sensitive or long-term mail storage.
 
-## Development
+## Tests
 
 ```sh
 cd worker
 npm test
-npm run dev
 ```
 
 MIT License. See [LICENSE](LICENSE).
