@@ -1,0 +1,30 @@
+name = "cloud-mail-v2"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cloud-mail"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MAIL_FILES"
+bucket_name = "cloud-mail-files"
+
+[vars]
+MAIL_DOMAINS = "example.com"
+MAIL_FROM = "Cloud Mail <noreply@example.com>"
+
+[assets]
+directory = "../web"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*", "/health"]
+
+[[send_email]]
+name = "EMAIL"
