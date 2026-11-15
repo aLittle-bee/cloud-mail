@@ -24,7 +24,7 @@ async function mailboxAuth(request, env) {
 }
 
 async function storeMessage(env, message) {
-  const id = randomId();
+  const id = message.id || randomId();
   await env.DB.prepare(`INSERT INTO messages
     (id,mailbox_id,direction,sender,recipients,subject,text_body,html_body,message_id,size_bytes)
     VALUES (?,?,?,?,?,?,?,?,?,?)`)
@@ -63,7 +63,7 @@ async function handleInbound(message, env) {
     await env.MAIL_FILES.put(objectKey, raw, { httpMetadata: { contentType: "message/rfc822" } });
   }
   await storeMessage(env, {
-    mailboxId: mailbox.id, direction: "inbound",
+    id, mailboxId: mailbox.id, direction: "inbound",
     sender: parsed.from?.address || message.from || "",
     recipients: recipients.length ? recipients : [recipient],
     subject: parsed.subject || "(no subject)",
@@ -123,6 +123,8 @@ async function api(request, env) {
   const mailbox = await mailboxAuth(request, env);
   if (!mailbox) return errorResponse("Unauthorized", 401);
   if (!env.DB) return errorResponse("D1 binding DB is missing", 503);
+
+  if (path === "/me" && request.method === "GET") return json({ ok: true, data: mailbox });
 
   if (path === "/mail" && request.method === "GET") {
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 25)));
