@@ -92,7 +92,7 @@ The raw mailbox API key is returned once at creation or rotation. Store it secur
 - The current inbound parser extracts basic headers and the raw body text. Full MIME multipart parsing, encoded-word decoding, attachment extraction and HTML sanitization are not yet implemented.
 - R2 is not enabled for this Cloudflare account yet, so attachment/raw-source storage is not active.
 - Outbound delivery requires Email Sending domain onboarding. The Worker binding is configured, but Cloudflare's Email Domain API is currently unavailable to this account connection.
-- The admin page is currently an API entry/help page; mailbox administration is available through the documented authenticated API. A full browser management UI remains future work.
+- The browser admin page supports mailbox creation, listing, API-key rotation, and deletion. The browser inbox supports mailbox login, message listing/reading, and sending.
 - This is a Worker-based webmail/API service, not an IMAP/POP3 server.
 
 ## Security
