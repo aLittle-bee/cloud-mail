@@ -1,0 +1,8 @@
+# Generate with: openssl rand -base64 48
+ADMIN_API_KEY=replace-with-a-long-random-secret
+# Optional outbound provider
+RESEND_API_KEY=
+# Comma-separated accepted inbound domains
+MAIL_DOMAINS=example.com
+# Optional sender identity for outbound mail
+MAIL_FROM=Cloud Mail <noreply@example.com>

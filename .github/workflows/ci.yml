@@ -1,0 +1,20 @@
+name: CI
+on:
+  push:
+    branches: [main, "rewrite/**"]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install worker dependencies
+        working-directory: worker
+        run: npm install
+      - name: Unit tests
+        working-directory: worker
+        run: npm test

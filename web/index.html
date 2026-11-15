@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="Cloud Mail — a private, Cloudflare-powered mailbox.">
+  <title>Cloud Mail</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header><div class="brand"><span class="logo">✉</span><div><h1>Cloud Mail</h1><p>Private mailbox workspace</p></div></div><span id="connection" class="status">Not connected</span></header>
+    <section id="connect" class="panel connect">
+      <h2>Connect your mailbox</h2>
+      <p>Enter the mailbox API key issued by your Cloud Mail administrator.</p>
+      <form id="connect-form"><label for="api-key">Mailbox API key</label><input id="api-key" type="password" autocomplete="off" required placeholder="cm_…"><button>Connect mailbox</button></form>
+      <p class="hint">Your key is kept in this browser session only.</p>
+    </section>
+    <section id="inbox" class="workspace hidden">
+      <aside class="panel sidebar"><div class="account"><span class="avatar">M</span><div><strong id="mail-address">Mailbox</strong><small>Connected</small></div></div><button id="refresh" class="secondary">↻ Refresh</button><button id="disconnect" class="quiet">Disconnect</button></aside>
+      <section class="panel messages"><div class="section-head"><div><h2>Inbox</h2><p id="count">Your latest messages</p></div></div><div id="message-list" class="message-list"><div class="empty">No messages yet.</div></div></section>
+      <section class="panel reader"><div id="reader-empty" class="empty reader-empty">Select a message to read</div><article id="reader" class="hidden"><div class="reader-head"><span id="reader-direction" class="tag"></span><h2 id="reader-subject"></h2><p id="reader-from"></p><small id="reader-date"></small></div><pre id="reader-body"></pre></article></section>
+    </section>
+    <footer>Cloud Mail · Self-hosted on Cloudflare Workers</footer>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
