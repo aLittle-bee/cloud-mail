@@ -1,8 +1,8 @@
-# Generate with: openssl rand -base64 48
-ADMIN_API_KEY=replace-with-a-long-random-secret
-# Optional outbound provider
-RESEND_API_KEY=
-# Comma-separated accepted inbound domains
-MAIL_DOMAINS=example.com
-# Optional sender identity for outbound mail
-MAIL_FROM=Cloud Mail <noreply@example.com>
+# Mail domain accepted by the inbound handler
+MAIL_DOMAINS=12310721.xyz
+# Verified sender address for Cloudflare Email Sending
+MAIL_FROM=noreply@12310721.xyz
+
+# Local development administrator key:
+# Insert SHA-256(ADMIN_KEY) into the settings table as admin_api_key_hash.
+# Do not place the plaintext key in this file or commit it.
