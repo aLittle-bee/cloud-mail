@@ -154,7 +154,7 @@ async function api(request, env) {
     const { results } = await env.DB.prepare(query).bind(...args).all();
     return json({ ok: true, data: results });
   }
-  const attachmentListMatch = /^\\/mail\\/([\\w-]+)\\/attachments$/.exec(path);
+  const attachmentListMatch = /^\/mail\/([\w-]+)\/attachments$/.exec(path);
   if (attachmentListMatch && request.method === "GET") {
     const owned = await env.DB.prepare("SELECT id FROM messages WHERE id=? AND mailbox_id=?").bind(attachmentListMatch[1], mailbox.id).first();
     if (!owned) return errorResponse("Message not found", 404);
@@ -162,7 +162,7 @@ async function api(request, env) {
       .bind(attachmentListMatch[1], mailbox.id).all();
     return json({ ok: true, data: results });
   }
-  const attachmentMatch = /^\\/attachments\\/([\\w-]+)$/.exec(path);
+  const attachmentMatch = /^\/attachments\/([\w-]+)$/.exec(path);
   if (attachmentMatch && request.method === "GET") {
     const item = await env.DB.prepare("SELECT id,filename,content_type,object_key FROM attachments WHERE id=? AND mailbox_id=?")
       .bind(attachmentMatch[1], mailbox.id).first();
