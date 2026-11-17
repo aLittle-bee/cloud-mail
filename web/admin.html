@@ -1,8 +1,13 @@
 <!doctype html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cloud Mail Admin</title><link rel="stylesheet" href="/style.css"></head>
-<body><main class="shell"><header><div class="brand"><span class="logo">✉</span><div><h1>Cloud Mail Admin</h1><p>Mailbox administration</p></div></div><a href="/" style="color:#93c5fd">← Inbox</a></header>
-<section id="login" class="panel connect"><h2>Administrator access</h2><p>Enter the ADMIN_API_KEY configured as a Worker secret. The key stays in memory for this tab.</p><form id="login-form"><label>Admin API key</label><input id="admin-key" type="password" required autocomplete="off"><button>Connect</button></form></section>
-<section id="dashboard" class="panel hidden" style="padding:24px"><div class="section-head"><h2>Mailboxes</h2><p>Create, inspect, rotate or remove mailbox credentials.</p></div>
-<form id="create-form" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin:20px 0"><input id="new-email" type="email" placeholder="user@example.com" required><input id="new-label" placeholder="Label (optional)"><button>Create mailbox</button></form>
-<div id="new-key" class="hidden" style="background:#102b25;border:1px solid #166534;padding:14px;border-radius:10px;margin-bottom:16px;overflow-wrap:anywhere"></div>
-<div id="mailboxes"></div></section><footer>Cloud Mail Admin · Keep your administrator key private</footer><div id="toast" role="status" aria-live="polite"></div></main><script type="module" src="/admin.js"></script></body></html>
+<body><main class="shell"><header><div class="brand"><span class="logo">✉</span><div><h1>Cloud Mail Admin</h1><p>Mailbox and protocol administration</p></div></div><a href="/" style="color:#93c5fd">← Inbox</a></header>
+<section id="login" class="panel connect"><h2>Administrator access</h2><form id="login-form"><label>Admin API key</label><input id="admin-key" type="password" required autocomplete="off"><button>Connect</button></form></section>
+<section id="dashboard" class="hidden">
+<section class="panel" style="padding:24px"><h2>Global settings</h2><form id="settings-form">
+<label>Administrator forwarding address</label><input id="admin-forward" type="email" placeholder="admin@example.com">
+<label><input id="imap-enabled" type="checkbox"> Enable IMAP over TLS (993)</label>
+<label><input id="pop3-enabled" type="checkbox"> Enable POP3 over TLS (995)</label>
+<button>Save settings</button></form><p id="storage-usage"></p><small>Project R2 quota: fixed at 512 MiB. New messages are rejected for mailbox storage when full; configured forwarding targets still receive them.</small></section>
+<section class="panel" style="padding:24px"><h2>Create mailbox</h2><form id="create-form"><input id="new-email" type="email" placeholder="user@12310721.xyz" required><input id="new-label" placeholder="Label (optional)"><button>Create mailbox</button></form><div id="new-key" class="hidden"></div></section>
+<section class="panel" style="padding:24px"><h2>Mailboxes and forwarding</h2><div id="mailboxes"></div></section>
+</section><footer>Cloud Mail Admin · Keep administrator and mailbox keys private</footer><div id="toast" role="status" aria-live="polite"></div></main><script type="module" src="/admin.js"></script></body></html>
