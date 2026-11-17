@@ -1,0 +1,16 @@
+services:
+  cloud-mail-protocols:
+    build: .
+    container_name: cloud-mail-protocols
+    restart: unless-stopped
+    ports:
+      - "993:993"
+      - "995:995"
+    environment:
+      CLOUD_MAIL_API_URL: https://mail.12310721.xyz/api/v1
+      TLS_CERT_FILE: /certs/fullchain.pem
+      TLS_KEY_FILE: /certs/privkey.pem
+      IMAP_PORT: "993"
+      POP3_PORT: "995"
+    volumes:
+      - ./certs:/certs:ro
