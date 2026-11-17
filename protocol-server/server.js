@@ -53,10 +53,10 @@ function imap(socket,enabled) {
   if(!enabled){socket.end();return}
   async function refresh(){mailbox=await messages(key);return mailbox}
   async function handle(line){
+    if(authPending){try{authPending=false;const decoded=Buffer.from(line.trim(),"base64").toString("utf8").split("\0");user=decoded[1]||"";key=decoded[2]||"";await authenticate(user,key);write(socket,authTag+" OK AUTHENTICATE completed")}catch(e){write(socket,authTag+" NO "+String(e.message||e).replace(/[\\r\\n]/g," ").slice(0,180))}finally{authTag=""}return}
     const first=line.indexOf(" ");if(first<0){write(socket,"* BAD Invalid command");return}
     const tag=line.slice(0,first),rest=line.slice(first+1),space=rest.indexOf(" "),command=(space<0?rest:rest.slice(0,space)).toUpperCase(),args=space<0?"":rest.slice(space+1),a=words(args);
     try{
-      if(authPending){authPending=false;const decoded=Buffer.from(line.trim(),"base64").toString("utf8").split("\0");user=decoded[1]||"";key=decoded[2]||"";await authenticate(user,key);write(socket,authTag+" OK AUTHENTICATE completed");authTag="";return}
       if(command==="CAPABILITY"){write(socket,"* CAPABILITY IMAP4rev1 UIDPLUS AUTH=PLAIN");write(socket,tag+" OK CAPABILITY completed");return}
       if(command==="AUTHENTICATE"&&a[0]?.toUpperCase()==="PLAIN"){authTag=tag;if(a[1]){const decoded=Buffer.from(a[1],"base64").toString("utf8").split("\0");user=decoded[1]||"";key=decoded[2]||"";await authenticate(user,key);write(socket,tag+" OK AUTHENTICATE completed")}else{authPending=true;write(socket,"+")}return}
       if(command==="NOOP"){write(socket,tag+" OK NOOP completed");return}
