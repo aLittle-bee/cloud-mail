@@ -3,7 +3,7 @@
 <body><main class="shell"><header><div class="brand"><span class="logo">✉</span><div><h1>Cloud Mail Admin</h1><p>Mailbox and protocol administration</p></div></div><a href="/" style="color:#93c5fd">← Inbox</a></header>
 <section id="login" class="panel connect"><h2>Administrator access</h2><form id="login-form"><label>Admin API key</label><input id="admin-key" type="password" required autocomplete="off"><button>Connect</button></form></section>
 <section id="dashboard" class="hidden">
-<section class="panel" style="padding:24px"><h2>Global settings</h2><form id="settings-form">
+<section class="panel" style="padding:24px"><h2>Global settings</h2><p><small>IMAP/POP3 switches only take effect after the separate TLS TCP gateway is deployed on a public host.</small></p><form id="settings-form">
 <label>Administrator forwarding address</label><input id="admin-forward" type="email" placeholder="admin@example.com">
 <label><input id="imap-enabled" type="checkbox"> Enable IMAP over TLS (993)</label>
 <label><input id="pop3-enabled" type="checkbox"> Enable POP3 over TLS (995)</label>
