@@ -65,7 +65,7 @@ function imap(socket,enabled) {
       if(!key){write(socket,tag+" NO Authenticate first");return}
       if(command==="LIST"||command==="LSUB"){write(socket,'* LIST (\\HasNoChildren) "/" "INBOX"');write(socket,tag+" OK LIST completed");return}
       if(command==="NAMESPACE"){write(socket,'* NAMESPACE (("" "/")) NIL NIL');write(socket,tag+" OK NAMESPACE completed");return}
-      if(command==="STATUS"){const rows=await refresh();const unseen=rows.filter(x=>!x.is_read).length;const uidnext=Math.max(0,...rows.map(x=>Number(x.protocol_uid)||0))+1;write(socket,"* STATUS INBOX (MESSAGES "+rows.filter(x=>!x.is_deleted).length+" UNSEEN "+unseen+" UIDNEXT "+uidnext+" UIDVALIDITY 1)");write(socket,tag+" OK STATUS completed");return}
+      if(command==="STATUS"){const rows=await refresh();const unseen=rows.filter(x=>!x.is_read).length;const uidnext=Math.max(0,...rows.map(x=>Number(x.protocol_uid)||0))+1;write(socket,"* STATUS INBOX (MESSAGES "+rows.length+" UNSEEN "+unseen+" UIDNEXT "+uidnext+" UIDVALIDITY 1)");write(socket,tag+" OK STATUS completed");return}
       if(command==="SELECT"||command==="EXAMINE"){await refresh();selected=true;const active=mailbox;const unseen=active.filter(x=>!x.is_read).length;const uidnext=Math.max(0,...mailbox.map(x=>Number(x.protocol_uid)||0))+1;write(socket,"* FLAGS (\\Seen \\Deleted)");write(socket,"* "+active.length+" EXISTS");write(socket,"* "+unseen+" RECENT");write(socket,"* OK [UIDVALIDITY 1] stable UIDs");write(socket,"* OK [UIDNEXT "+uidnext+"] predicted next UID");write(socket,"* OK [PERMANENTFLAGS (\\Seen \\Deleted)]");write(socket,tag+" OK ["+(command==="EXAMINE"?"READ-ONLY":"READ-WRITE")+"] "+command+" completed");return}
       if(command==="CLOSE"){if(selected){await expunge(key);await refresh();selected=false}write(socket,tag+" OK CLOSE completed");return}
       if(command==="CHECK"){write(socket,tag+" OK CHECK completed");return}
@@ -82,7 +82,7 @@ function imap(socket,enabled) {
   async function doFetch(tag,args,uidMode){
     if(!selected){write(socket,tag+" NO Select a mailbox first");return}
     const p=args.indexOf(" ");if(p<0){write(socket,tag+" BAD FETCH syntax");return}
-    const set=args.slice(0,p),items=args.slice(p+1),all=await refresh(),selectedRows=all.filter(x=>!x.is_deleted),numbers=sequenceNumbers(set,uidMode?all.length:selectedRows.length);
+    const set=args.slice(0,p),items=args.slice(p+1),all=await refresh(),selectedRows=all,maxUid=Math.max(0,...all.map(x=>Number(x.protocol_uid)||0)),numbers=sequenceNumbers(set,uidMode?maxUid:selectedRows.length);
     for(const n of numbers){const m=uidMode?all.find(x=>Number(x.protocol_uid)===n):selectedRows[n-1];if(!m)continue;const seq=selectedRows.indexOf(m)+1,raw=await rawMessage(key,m.id),peek=/BODY\.PEEK/i.test(items),f=flags(m);write(socket,"* "+seq+" FETCH (UID "+m.protocol_uid+" FLAGS "+f+" RFC822.SIZE "+raw.length+" BODY[] {"+raw.length+"}");socket.write(raw);socket.write(Buffer.from("\r\n)\r\n"));if(!peek&&!m.is_read)await patch(key,m.id,{is_read:true})}
     write(socket,tag+" OK FETCH completed");
   }
@@ -90,7 +90,7 @@ function imap(socket,enabled) {
     if(!selected){write(socket,tag+" NO Select a mailbox first");return}
     const p=args.indexOf(" ");if(p<0){write(socket,tag+" BAD STORE syntax");return}
     const set=args.slice(0,p),rest=args.slice(p+1),match=rest.match(/^([+-]?FLAGS(?:\.SILENT)?)\s+(.+)$/i);if(!match){write(socket,tag+" BAD STORE flags syntax");return}
-    const mode=match[1].toUpperCase(),flagText=match[2],wantSeen=/\\Seen/i.test(flagText),wantDeleted=/\\Deleted/i.test(flagText),all=await refresh(),selectedRows=all.filter(x=>!x.is_deleted),nums=sequenceNumbers(set,uidMode?all.length:selectedRows.length);
+    const mode=match[1].toUpperCase(),flagText=match[2],wantSeen=/\\Seen/i.test(flagText),wantDeleted=/\\Deleted/i.test(flagText),all=await refresh(),selectedRows=all,maxUid=Math.max(0,...all.map(x=>Number(x.protocol_uid)||0)),nums=sequenceNumbers(set,uidMode?maxUid:selectedRows.length);
     for(const n of nums){const m=uidMode?all.find(x=>Number(x.protocol_uid)===n):selectedRows[n-1];if(!m)continue;const body={};if(mode.startsWith("+")){if(wantSeen)body.is_read=true;if(wantDeleted)body.is_deleted=true}else if(mode.startsWith("-")){if(wantSeen)body.is_read=false;if(wantDeleted)body.is_deleted=false}else{body.is_read=wantSeen;body.is_deleted=wantDeleted}await patch(key,m.id,body);if(!mode.endsWith(".SILENT")){const fresh={...m,is_read:body.is_read??m.is_read,is_deleted:body.is_deleted??m.is_deleted};write(socket,"* "+(selectedRows.indexOf(m)+1)+" FETCH (UID "+m.protocol_uid+" FLAGS "+flags(fresh)+")")}}
     write(socket,tag+" OK STORE completed");
   }
