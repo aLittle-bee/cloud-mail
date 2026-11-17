@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node --check src/index.js && node --check ../web/app.js && node --check ../web/admin.js && node --test"
+    "test": "node --check src/index.js && node --check ../web/app.js && node --check ../web/admin.js && node --check ../protocol-server/server.js && node --test"
   },
   "dependencies": {},
   "devDependencies": {
