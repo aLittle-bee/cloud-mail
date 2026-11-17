@@ -5,11 +5,18 @@ compatibility_date = "2026-11-15"
 [observability]
 enabled = true
 
+[triggers]
+crons = ["*/15 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "cloud-mail-v2"
 database_id = "54825a69-6ab8-4a03-9554-f0a842132488"
 migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MAIL_BUCKET"
+bucket_name = "cloud-mail-data"
 
 [[send_email]]
 name = "EMAIL"
