@@ -7,3 +7,5 @@ dist/
 .wrangler/
 coverage/
 .DS_Store
+protocol-server/certs/
+protocol-server/.env
